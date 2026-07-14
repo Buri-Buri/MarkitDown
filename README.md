@@ -28,15 +28,7 @@ All conversions are automatically saved to your system's default **Downloads** d
 
 ## How to Run
 
-### Option 1: Standalone Executable (Recommended)
-No Python installation is required.
-1. Navigate to the executable directory:
-   `D:\OneDrive - MSFT\Quantonova\md\markitdown_studio\dist\`
-2. Double-click **`MarkItDownStudio.exe`**.
-3. A browser tab will open automatically at a local port containing the interface.
-4. **Auto-Shutdown**: When you close the browser tab, the background executable will automatically shut down within 10 seconds.
-
-### Option 2: Run in Python (Development Mode)
+### Run in Python (Development Mode)
 Requires Python 3.10+ and dependencies.
 1. Ensure the required Python packages are installed:
    ```bash
