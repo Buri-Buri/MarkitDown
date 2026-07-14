@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MarkItDown Studio</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="marked.min.js"></script>
+</head>
+<body class="dark-mode">
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="24" height="24" rx="6" fill="url(#grad)" />
+                    <path d="M7 17V7.5L12 12L17 7.5V17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <defs>
+                        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#3b82f6" />
+                            <stop offset="100%" stop-color="#8b5cf6" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <span class="logo-text">MarkItDown <span>Studio</span></span>
+            </div>
+            
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="convert-tab">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                    <span>Convert Files</span>
+                </button>
+                <button class="nav-item" data-tab="history-tab">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>History</span>
+                </button>
+                <button class="nav-item" data-tab="settings-tab">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    <span>Settings</span>
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <span>Version 1.0.0</span>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- CONVERT TAB -->
+            <section id="convert-tab" class="tab-content active">
+                <div class="header">
+                    <h1>Convert Documents to Markdown</h1>
+                    <p>Convert PDFs, Office documents, Images, Audio, Epubs and more into LLM-friendly clean Markdown.</p>
+                </div>
+
+                <div class="convert-grid">
+                    <!-- Drop Zone and File Selection -->
+                    <div class="card drop-card">
+                        <div class="drop-zone" id="drop-zone">
+                            <div class="drop-icon">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+                            </div>
+                            <h3>Drag & drop files here</h3>
+                            <p class="text-muted">or use the buttons below to select files or folders</p>
+                            <div class="btn-group">
+                                <button class="btn btn-primary" id="btn-select-files">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    Browse Files
+                                </button>
+                                <button class="btn btn-secondary" id="btn-select-folder">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                    Select Folder
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Webpage / YouTube URL Card -->
+                    <div class="card config-card">
+                        <h3>Convert URL / Webpage</h3>
+                        <p class="text-muted" style="font-size: 12px; margin-bottom: 14px;">Converts links and saves files automatically to your default <strong>Downloads</strong> folder.</p>
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label for="input-url">Webpage or YouTube Link</label>
+                            <div class="input-with-btn">
+                                <input type="text" id="input-url" placeholder="https://example.com or https://youtube.com/watch?v=...">
+                                <button class="btn btn-primary" id="btn-convert-url">Convert URL</button>
+                            </div>
+                        </div>
+                        <div class="config-status-list">
+                            <div class="config-status-item" id="llm-indicator">
+                                <div class="dot red"></div>
+                                <span>LLM image description is disabled</span>
+                            </div>
+                            <div class="config-status-item" id="docintel-indicator">
+                                <div class="dot red"></div>
+                                <span>Azure Doc Intel is disabled</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Queued Files -->
+                <div class="card queue-card" id="queue-card" style="display: none;">
+                    <div class="queue-header">
+                        <h3>Conversion Queue (<span id="queue-count">0</span> files)</h3>
+                        <div class="queue-actions">
+                            <button class="btn btn-danger btn-sm" id="btn-clear-queue">Remove All</button>
+                            <button class="btn btn-success" id="btn-start-convert">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                Start Conversion
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="queue-table">
+                            <thead>
+                                <tr>
+                                    <th>File Name</th>
+                                    <th>Format</th>
+                                    <th>Size</th>
+                                    <th>Output Path</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="queue-list">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- HISTORY TAB -->
+            <section id="history-tab" class="tab-content">
+                <div class="header">
+                    <div class="header-action-row">
+                        <div>
+                            <h1>Conversion History</h1>
+                            <p>Track your recent conversions, view rendered markdown, or open the resulting files on disk.</p>
+                        </div>
+                        <button class="btn btn-danger btn-sm" id="btn-clear-history">Clear History</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Source File</th>
+                                    <th>Output File</th>
+                                    <th>Converted At</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-list">
+                                <tr>
+                                    <td colspan="5" class="empty-state">No history recorded yet. Converted files will appear here.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SETTINGS TAB -->
+            <section id="settings-tab" class="tab-content">
+                <div class="header">
+                    <h1>Configuration Settings</h1>
+                    <p>Configure multimodal descriptions, custom API endpoints, and other layout features.</p>
+                </div>
+
+                <form id="settings-form" class="settings-form">
+                    <!-- LLM SETTINGS -->
+                    <div class="card settings-section">
+                        <div class="section-header">
+                            <label class="switch">
+                                <input type="checkbox" id="use-llm">
+                                <span class="slider"></span>
+                            </label>
+                            <div>
+                                <h3>Enable LLM Descriptions</h3>
+                                <p class="text-muted">Use multimodal LLMs (like OpenAI GPT-4o) to describe images and extract visual content.</p>
+                            </div>
+                        </div>
+
+                        <div class="settings-fields collapsed" id="llm-fields">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="api-key">API Key</label>
+                                    <input type="password" id="api-key" placeholder="Enter API Key">
+                                </div>
+                                <div class="form-group">
+                                    <label for="api-base">API Base URL (Optional)</label>
+                                    <input type="text" id="api-base" placeholder="https://api.openai.com/v1">
+                                </div>
+                            </div>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="llm-model">Model Name</label>
+                                    <input type="text" id="llm-model" placeholder="gpt-4o">
+                                </div>
+                                <div class="form-group">
+                                    <label for="llm-prompt">Extraction Prompt (Optional)</label>
+                                    <input type="text" id="llm-prompt" placeholder="Write a detailed caption for this image.">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AZURE DOCUMENT INTELLIGENCE -->
+                    <div class="card settings-section">
+                        <div class="section-header">
+                            <label class="switch">
+                                <input type="checkbox" id="use-docintel">
+                                <span class="slider"></span>
+                            </label>
+                            <div>
+                                <h3>Enable Azure AI Document Intelligence</h3>
+                                <p class="text-muted">Extract content from scanned PDFs and complex documents using Azure AI services.</p>
+                            </div>
+                        </div>
+
+                        <div class="settings-fields collapsed" id="docintel-fields">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="docintel-endpoint">Azure Endpoint</label>
+                                    <input type="text" id="docintel-endpoint" placeholder="https://your-service.cognitiveservices.azure.com/">
+                                </div>
+                                <div class="form-group">
+                                    <label for="docintel-key">Azure Access Key</label>
+                                    <input type="password" id="docintel-key" placeholder="Enter Access Key">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="action-footer">
+                        <div id="settings-save-success" class="toast-message">Settings saved successfully!</div>
+                        <button type="submit" class="btn btn-primary" id="btn-save-settings">Save Settings</button>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <!-- PREVIEW DRAWER / SLIDING PANEL -->
+    <div class="preview-drawer" id="preview-drawer">
+        <div class="drawer-header">
+            <div class="drawer-title-area">
+                <h2 id="preview-title">document.md</h2>
+                <p class="text-muted" id="preview-subtitle">C:/path/to/document.md</p>
+            </div>
+            <div class="drawer-actions">
+                <button class="btn btn-secondary btn-sm" id="btn-preview-copy">Copy Markdown</button>
+                <button class="btn btn-secondary btn-sm" id="btn-preview-open">Open File</button>
+                <button class="btn btn-icon btn-sm" id="btn-preview-close" title="Close">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="drawer-tabs">
+            <button class="drawer-tab active" data-view="rendered-view">Preview Document</button>
+            <button class="drawer-tab" data-view="raw-view">Raw Markdown</button>
+        </div>
+
+        <div class="drawer-body">
+            <div id="rendered-view" class="drawer-view-content active">
+                <div class="markdown-body" id="preview-rendered">
+                    <!-- HTML output from marked.js -->
+                </div>
+            </div>
+            <div id="raw-view" class="drawer-view-content">
+                <textarea id="preview-raw" class="raw-editor" readonly></textarea>
+            </div>
+        </div>
+    </div>
+    
+    <!-- OVERLAY -->
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
