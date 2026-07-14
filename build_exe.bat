@@ -20,7 +20,11 @@ echo This may take a few minutes as it packages python, markitdown,
 echo openai, and all GUI renderers into a single standalone binary.
 echo.
 
-python -m PyInstaller --noconsole --onefile --add-data "ui;ui" --add-data "%MAGIKA_DIR%\models;magika/models" --add-data "%MAGIKA_DIR%\config;magika/config" --name MarkItDownStudio app.py
+:: Clean previous build directory and spec file to prevent PyInstaller caching issues
+if exist build rd /s /q build
+if exist MarkItDownStudio.spec del MarkItDownStudio.spec
+
+python -m PyInstaller --clean --noconsole --onefile --add-data "ui;ui" --add-data "%MAGIKA_DIR%\models;magika/models" --add-data "%MAGIKA_DIR%\config;magika/config" --name MarkItDownStudio app.py
 
 if %errorlevel% equ 0 (
     echo.
