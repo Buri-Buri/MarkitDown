@@ -4,7 +4,7 @@ MarkItDown Studio is a modern, premium Windows desktop utility built on top of M
 
 All conversions are automatically saved to your system's default **Downloads** directory.
 
-## 💻 System Requirements
+## System Requirements
 
 - **Operating System**: Windows 10 or Windows 11 (64-bit).
 - **Web Browser**: Google Chrome, Microsoft Edge, Mozilla Firefox, or any modern web browser.
@@ -14,7 +14,7 @@ All conversions are automatically saved to your system's default **Downloads** d
 
 ---
 
-## ✨ Features
+## Features
 
 - **Multi-Format Conversion**: Supports PDF, Word (.docx), Excel (.xlsx, .xls), PowerPoint (.pptx), Epubs, Outlook messages (.msg), HTML, text formats (.txt, .csv, .json, .xml), and Zip archives.
 - **URL & YouTube Conversion**: Paste any webpage URL or YouTube video link to instantly convert it to Markdown (web page scraping or video transcript download).
@@ -26,7 +26,7 @@ All conversions are automatically saved to your system's default **Downloads** d
 
 ---
 
-## 🚀 How to Run
+## How to Run
 
 ### Option 1: Standalone Executable (Recommended)
 No Python installation is required.
@@ -46,7 +46,7 @@ Requires Python 3.10+ and dependencies.
 
 ---
 
-## 🛠️ Configuration Settings
+## Configuration Settings
 
 Inside the **Settings** tab in the sidebar:
 - **LLM Settings**: Toggle "Enable LLM Descriptions" and provide your OpenAI API Key, Model name (default `gpt-4o`), and a custom extraction prompt. This enables describing visual layouts in images.
@@ -54,7 +54,7 @@ Inside the **Settings** tab in the sidebar:
 
 ---
 
-## 📦 How to Rebuild the Executable
+## How to Rebuild the Executable
 
 If you modify the source files and wish to compile a new `.exe`:
 1. Double-click **`build_exe.bat`** inside the `markitdown_studio` directory.
@@ -63,7 +63,7 @@ If you modify the source files and wish to compile a new `.exe`:
 
 ---
 
-## 🤝 Credits & Acknowledgments
+## Credits & Acknowledgments
 
 MarkItDown Studio is built on top of and fully powered by **Microsoft's `markitdown` engine**. We would like to express our gratitude to the creators and maintainers of the official repository:
 - **Official Repository**: [microsoft/markitdown](https://github.com/microsoft/markitdown)
