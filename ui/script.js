@@ -97,6 +97,14 @@ const settingsSaveSuccess = document.getElementById('settings-save-success');
 const inputUrl = document.getElementById('input-url');
 const btnConvertUrl = document.getElementById('btn-convert-url');
 
+// Dedicated Image Section Elements
+const btnSelectImages = document.getElementById('btn-select-images');
+const nativeImageInput = document.getElementById('native-image-input');
+const imageDropZone = document.getElementById('image-drop-zone');
+const linkGotoSettingsFromImg = document.getElementById('link-goto-settings-from-img');
+const imageVisionIndicator = document.getElementById('image-vision-indicator');
+const imageCustomPrompt = document.getElementById('image-custom-prompt');
+
 // Configuration Indicators
 const llmIndicator = document.getElementById('llm-indicator');
 const docintelIndicator = document.getElementById('docintel-indicator');
@@ -119,24 +127,89 @@ let activePreviewMarkdown = "";
 let activePreviewOutputPath = "";
 
 // ----------------------------------------------------
-// Initialization
+// Initialization & Tab Lifecycle Management
 // ----------------------------------------------------
+
+const currentTabId = 'tab_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
 
 document.addEventListener('DOMContentLoaded', () => {
     loadSettings();
     loadHistory();
     setupEventListeners();
-    
-    // Start background ping loop to keep server alive
-    pingServer();
-    setInterval(pingServer, 3000);
+    setupTabLifecycle();
 });
+
+function setupTabLifecycle() {
+    // Notify server that tab opened
+    registerTab();
+
+    // Web Worker heartbeat to prevent browser background timer throttling
+    try {
+        const workerCode = `
+            setInterval(function() {
+                postMessage('ping');
+            }, 5000);
+        `;
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const worker = new Worker(URL.createObjectURL(blob));
+        worker.onmessage = function() {
+            pingServer();
+        };
+    } catch (e) {
+        // Fallback to standard interval
+        setInterval(pingServer, 5000);
+    }
+
+    // Immediate ping when user focuses or tab becomes visible
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            pingServer();
+        }
+    });
+    window.addEventListener('focus', pingServer);
+
+    // Notify server when tab is closing
+    const handleClose = () => {
+        const payload = JSON.stringify({ tab_id: currentTabId });
+        if (navigator.sendBeacon) {
+            const blob = new Blob([payload], { type: 'application/json' });
+            navigator.sendBeacon('/api/tab_closed', blob);
+        } else {
+            fetch('/api/tab_closed', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: payload,
+                keepalive: true
+            }).catch(() => {});
+        }
+    };
+
+    window.addEventListener('beforeunload', handleClose);
+    window.addEventListener('pagehide', handleClose);
+}
+
+async function registerTab() {
+    try {
+        await fetch('/api/tab_opened', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tab_id: currentTabId })
+        });
+    } catch (err) {
+        // Retry in 1s if server is still initializing
+        setTimeout(registerTab, 1000);
+    }
+}
 
 async function pingServer() {
     try {
-        await fetch('/api/ping');
+        await fetch('/api/ping', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tab_id: currentTabId })
+        });
     } catch (err) {
-        console.warn("Ping failed (server may be offline)", err);
+        // Ignored
     }
 }
 
@@ -161,9 +234,66 @@ function setupEventListeners() {
         });
     });
 
-    // File Selection Buttons
-    btnSelectFiles.addEventListener('click', selectFiles);
-    btnSelectFolder.addEventListener('click', selectFolder);
+    // Native File Selection Inputs
+    const nativeFileInput = document.getElementById('native-file-input');
+    const nativeFolderInput = document.getElementById('native-folder-input');
+
+    if (nativeFileInput) {
+        nativeFileInput.addEventListener('change', (e) => {
+            handleSelectedFiles(e.target.files);
+        });
+    }
+
+    if (nativeFolderInput) {
+        nativeFolderInput.addEventListener('change', (e) => {
+            handleSelectedFiles(e.target.files);
+        });
+    }
+
+    if (nativeImageInput) {
+        nativeImageInput.addEventListener('change', (e) => {
+            handleSelectedImages(e.target.files);
+        });
+    }
+
+    btnSelectFiles.addEventListener('click', () => {
+        if (nativeFileInput) {
+            nativeFileInput.value = '';
+            nativeFileInput.click();
+        } else {
+            selectFiles();
+        }
+    });
+
+    btnSelectFolder.addEventListener('click', () => {
+        if (nativeFolderInput) {
+            nativeFolderInput.value = '';
+            nativeFolderInput.click();
+        } else {
+            selectFolder();
+        }
+    });
+
+    if (btnSelectImages) {
+        btnSelectImages.addEventListener('click', () => {
+            if (nativeImageInput) {
+                nativeImageInput.value = '';
+                nativeImageInput.click();
+            }
+        });
+    }
+
+    if (linkGotoSettingsFromImg) {
+        linkGotoSettingsFromImg.addEventListener('click', (e) => {
+            e.preventDefault();
+            navItems.forEach(n => n.classList.remove('active'));
+            tabContents.forEach(t => t.classList.remove('active'));
+            const settingsTabNav = Array.from(navItems).find(n => n.getAttribute('data-tab') === 'settings-tab');
+            if (settingsTabNav) settingsTabNav.classList.add('active');
+            const settingsTab = document.getElementById('settings-tab');
+            if (settingsTab) settingsTab.classList.add('active');
+        });
+    }
 
     // URL Conversion Button
     btnConvertUrl.addEventListener('click', convertUrl);
@@ -227,7 +357,7 @@ function setupEventListeners() {
 }
 
 // ----------------------------------------------------
-// Drag & Drop Handling (Supports Web Browser File Upload)
+// Drag & Drop and Instant File Selection
 // ----------------------------------------------------
 function setupDragAndDrop() {
     ['dragenter', 'dragover'].forEach(eventName => {
@@ -249,87 +379,119 @@ function setupDragAndDrop() {
     dropZone.addEventListener('drop', (e) => {
         const dt = e.dataTransfer;
         const files = dt.files;
-        handleDroppedFiles(files);
+        handleSelectedFiles(files);
     }, false);
 
-    // Clicking the dropzone triggers file picker
+    // Clicking the dropzone triggers native file picker instantly
     dropZone.addEventListener('click', (e) => {
         if (e.target.closest('.btn')) return;
-        selectFiles();
+        const nativeFileInput = document.getElementById('native-file-input');
+        if (nativeFileInput) {
+            nativeFileInput.value = '';
+            nativeFileInput.click();
+        }
     });
+
+    // Dedicated Image Drop Zone
+    if (imageDropZone) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            imageDropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                imageDropZone.classList.add('hover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            imageDropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                imageDropZone.classList.remove('hover');
+            }, false);
+        });
+
+        imageDropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleSelectedImages(files);
+        }, false);
+
+        imageDropZone.addEventListener('click', (e) => {
+            if (e.target.closest('.btn')) return;
+            if (nativeImageInput) {
+                nativeImageInput.value = '';
+                nativeImageInput.click();
+            }
+        });
+    }
 }
 
-async function handleDroppedFiles(files) {
+function handleSelectedFiles(files) {
     if (!files || files.length === 0) return;
     
-    const addedFiles = [];
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+    Array.from(files).forEach(file => {
+        if (file.name.startsWith('.') || file.name === 'desktop.ini') return;
+        const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
         
-        if (file.path) {
-            const name = file.name;
-            const size = file.size;
-            const ext = name.substring(name.lastIndexOf('.')).toLowerCase();
-            
-            addedFiles.push({
-                path: file.path,
-                name: name,
-                size: size,
-                extension: ext
-            });
-        } else {
-            // Standard Web Browser Drag & Drop (Multipart upload route)
-            const fileObj = {
-                path: "UPLOADED:" + file.name,
+        const isDuplicate = conversionQueue.some(q => q.name === file.name && q.size === file.size && q.status !== 'error');
+        if (!isDuplicate) {
+            conversionQueue.push({
+                fileObject: file,
+                path: file.name,
                 name: file.name,
                 size: file.size,
-                extension: file.name.substring(file.name.lastIndexOf('.')).toLowerCase(),
-                status: 'converting',
+                extension: ext || 'FILE',
+                isVision: false,
+                status: 'pending',
                 error: '',
                 outputPath: '',
                 outputName: '',
                 markdown: ''
-            };
-            conversionQueue.push(fileObj);
-            renderQueueTable();
-            
-            const formData = new FormData();
-            formData.append('file', file);
-            
-            try {
-                const response = await fetch('/api/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-                const res = await response.json();
-                if (res.success) {
-                    fileObj.status = 'success';
-                    fileObj.outputPath = res.output_path;
-                    fileObj.outputName = res.output_name;
-                    fileObj.markdown = res.markdown;
-                } else {
-                    fileObj.status = 'error';
-                    fileObj.error = res.error;
-                }
-            } catch (err) {
-                fileObj.status = 'error';
-                fileObj.error = err.message || "Upload and convert failed";
-            }
-            renderQueueTable();
-            loadHistory();
+            });
         }
-    }
+    });
     
-    if (addedFiles.length > 0) {
-        addFilesToQueue(addedFiles);
-    }
+    renderQueueTable();
 }
 
-// ----------------------------------------------------
-// File Selection & URL Converter
-// ----------------------------------------------------
+function handleSelectedImages(files) {
+    if (!files || files.length === 0) return;
+    const promptInput = document.getElementById('image-custom-prompt');
+    const customPrompt = promptInput ? promptInput.value.trim() : '';
+    
+    Array.from(files).forEach(file => {
+        if (file.name.startsWith('.') || file.name === 'desktop.ini') return;
+        const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+        
+        const isDuplicate = conversionQueue.some(q => q.name === file.name && q.size === file.size && q.status !== 'error');
+        if (!isDuplicate) {
+            conversionQueue.push({
+                fileObject: file,
+                path: file.name,
+                name: file.name,
+                size: file.size,
+                extension: ext || 'IMG',
+                isVision: true,
+                prompt: customPrompt,
+                status: 'pending',
+                error: '',
+                outputPath: '',
+                outputName: '',
+                markdown: ''
+            });
+        }
+    });
+    
+    renderQueueTable();
+}
 
 async function selectFiles() {
+    const nativeFileInput = document.getElementById('native-file-input');
+    if (nativeFileInput) {
+        nativeFileInput.value = '';
+        nativeFileInput.click();
+        return;
+    }
     try {
         const files = await pywebview.api.select_files();
         if (files && files.length > 0) {
@@ -341,10 +503,16 @@ async function selectFiles() {
 }
 
 async function selectFolder() {
+    const nativeFolderInput = document.getElementById('native-folder-input');
+    if (nativeFolderInput) {
+        nativeFolderInput.value = '';
+        nativeFolderInput.click();
+        return;
+    }
     try {
         const folderPath = await pywebview.api.select_folder();
         if (folderPath) {
-            alert(`Selected folder: ${folderPath}\nTo convert files inside, you can select files using the 'Browse Files' button or drop them here.`);
+            alert(`Selected folder: ${folderPath}`);
         }
     } catch (err) {
         console.error("Error choosing folder", err);
@@ -452,6 +620,16 @@ function updateIndicators() {
     } else {
         llmIndicator.querySelector('.dot').className = 'dot red';
         llmIndicator.querySelector('span').innerText = 'LLM image description is disabled';
+    }
+
+    if (imageVisionIndicator) {
+        if (appSettings.api_key) {
+            imageVisionIndicator.querySelector('.dot').className = 'dot green';
+            imageVisionIndicator.querySelector('.vision-status-label').innerText = `AI Vision ready (${appSettings.llm_model || 'gpt-4o'})`;
+        } else {
+            imageVisionIndicator.querySelector('.dot').className = 'dot red';
+            imageVisionIndicator.querySelector('.vision-status-label').innerText = 'AI Vision disabled (Set API Key in Settings)';
+        }
     }
 
     if (appSettings.use_docintel && appSettings.docintel_endpoint) {
@@ -614,10 +792,13 @@ function renderQueueTable() {
         }
 
         const formattedSize = formatBytes(file.size);
+        const formatLabel = file.isVision 
+            ? `<span class="badge badge-vision" title="AI Vision">IMG (AI Vision)</span>` 
+            : file.extension.toUpperCase().replace('.', '');
         
         row.innerHTML = `
             <td class="table-source-cell" title="${file.path}"><strong>${file.name}</strong></td>
-            <td>${file.extension.toUpperCase().replace('.', '')}</td>
+            <td>${formatLabel}</td>
             <td>${formattedSize}</td>
             <td>${file.outputName || '<span class="text-muted">Auto-naming...</span>'}</td>
             <td>${badgeHTML}</td>
@@ -668,26 +849,52 @@ async function startConversion() {
     btnSelectFolder.disabled = true;
 
     for (let i = 0; i < conversionQueue.length; i++) {
-        const file = conversionQueue[i];
-        if (file.status === 'success' || file.path.startsWith("UPLOADED:") || file.extension === "URL") continue;
+        const item = conversionQueue[i];
+        if (item.status === 'success' || item.extension === "URL") continue;
 
-        file.status = 'converting';
+        item.status = 'converting';
         renderQueueTable();
 
         try {
-            const res = await pywebview.api.convert_file(file.path);
-            if (res.success) {
-                file.status = 'success';
-                file.outputPath = res.output_path;
-                file.outputName = res.output_name;
-                file.markdown = res.markdown;
+            let res;
+            if (item.fileObject) {
+                const formData = new FormData();
+                formData.append('file', item.fileObject);
+                if (item.isVision) {
+                    formData.append('force_llm', 'true');
+                    if (item.prompt) formData.append('prompt', item.prompt);
+                }
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                res = await response.json();
+            } else if (item.path && !item.path.startsWith("UPLOADED:")) {
+                const payload = { file_path: item.path };
+                if (item.isVision) {
+                    payload.force_llm = true;
+                    if (item.prompt) payload.prompt = item.prompt;
+                }
+                const response = await fetch('/api/convert_file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                res = await response.json();
+            }
+            
+            if (res && res.success) {
+                item.status = 'success';
+                item.outputPath = res.output_path;
+                item.outputName = res.output_name;
+                item.markdown = res.markdown;
             } else {
-                file.status = 'error';
-                file.error = res.error;
+                item.status = 'error';
+                item.error = (res && res.error) || "Conversion failed";
             }
         } catch (err) {
-            file.status = 'error';
-            file.error = err.message || "Unknown execution error";
+            item.status = 'error';
+            item.error = err.message || "Unknown execution error";
         }
         
         renderQueueTable();

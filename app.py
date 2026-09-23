@@ -1,6 +1,42 @@
-import os
 import sys
+import os
 import json
+
+# Ensure stdout and stderr exist when running headless via pythonw.exe without a console
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w", encoding="utf-8")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w", encoding="utf-8")
+
+# Fast Child Process Handler for OS Dialogs (Runs before any heavy imports or Flask setup)
+if __name__ == "__main__" and len(sys.argv) > 1 and sys.argv[1].startswith("--dialog"):
+    import tkinter as tk
+    from tkinter import filedialog
+    root = tk.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    if sys.argv[1] == "--dialog-files":
+        files = filedialog.askopenfilenames(
+            title="Select Files",
+            filetypes=[
+                ("All Supported Files", "*.pdf;*.docx;*.xlsx;*.xls;*.pptx;*.txt;*.csv;*.json;*.xml;*.htm;*.html;*.zip;*.epub;*.msg;*.wav;*.mp3;*.jpg;*.jpeg;*.png"),
+                ("PDF Documents", "*.pdf"),
+                ("Word Documents", "*.docx"),
+                ("Excel Sheets", "*.xlsx;*.xls"),
+                ("PowerPoint Slides", "*.pptx"),
+                ("Images", "*.jpg;*.jpeg;*.png"),
+                ("Audio Files", "*.wav;*.mp3"),
+                ("Ebooks", "*.epub"),
+                ("All Files", "*.*")
+            ]
+        )
+        print(json.dumps(list(files)))
+        sys.exit(0)
+    elif sys.argv[1] == "--dialog-folder":
+        folder = filedialog.askdirectory(title="Select Folder")
+        print(folder)
+        sys.exit(0)
+
 import time
 import socket
 import datetime
@@ -14,47 +50,49 @@ from pathlib import Path
 from flask import Flask, request, jsonify, send_from_directory
 from markitdown import MarkItDown
 
-# Child Process Handler for OS Dialogs (Runs before any heavy imports or Flask setup)
-if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        if sys.argv[1] == "--dialog-files":
-            import tkinter as tk
-            from tkinter import filedialog
-            root = tk.Tk()
-            root.withdraw()
-            root.attributes("-topmost", True)
-            files = filedialog.askopenfilenames(
-                title="Select Files",
-                filetypes=[
-                    ("All Supported Files", "*.pdf;*.docx;*.xlsx;*.xls;*.pptx;*.txt;*.csv;*.json;*.xml;*.htm;*.html;*.zip;*.epub;*.msg;*.wav;*.mp3;*.jpg;*.jpeg;*.png"),
-                    ("PDF Documents", "*.pdf"),
-                    ("Word Documents", "*.docx"),
-                    ("Excel Sheets", "*.xlsx;*.xls"),
-                    ("PowerPoint Slides", "*.pptx"),
-                    ("Images", "*.jpg;*.jpeg;*.png"),
-                    ("Audio Files", "*.wav;*.mp3"),
-                    ("Ebooks", "*.epub"),
-                    ("All Files", "*.*")
-                ]
-            )
-            print(json.dumps(list(files)))
-            sys.exit(0)
-        elif sys.argv[1] == "--dialog-folder":
-            import tkinter as tk
-            from tkinter import filedialog
-            root = tk.Tk()
-            root.withdraw()
-            root.attributes("-topmost", True)
-            folder = filedialog.askdirectory(title="Select Folder")
-            print(folder)
-            sys.exit(0)
+# Shared default converter instance to eliminate instantiation overhead
+default_converter = None
+def get_converter(kwargs):
+    global default_converter
+    if not kwargs:
+        if default_converter is None:
+            default_converter = MarkItDown()
+        return default_converter
+    return MarkItDown(**kwargs)
 
 # ----------------------------------------------------
 # Main Server Setup
 # ----------------------------------------------------
 
-# Global ping state for auto-shutdown
+# Active tabs tracking & shutdown state
+active_tabs = set()
+active_tabs_lock = threading.Lock()
 last_ping = time.time()
+has_connected = False
+shutdown_timer = None
+
+def schedule_shutdown_if_no_tabs():
+    global shutdown_timer
+    with active_tabs_lock:
+        if len(active_tabs) == 0 and has_connected:
+            if shutdown_timer is not None:
+                shutdown_timer.cancel()
+            # 4 second grace period to differentiate tab close from page refresh / reload
+            shutdown_timer = threading.Timer(4.0, do_shutdown)
+            shutdown_timer.daemon = True
+            shutdown_timer.start()
+
+def cancel_pending_shutdown():
+    global shutdown_timer
+    if shutdown_timer is not None:
+        shutdown_timer.cancel()
+        shutdown_timer = None
+
+def do_shutdown():
+    with active_tabs_lock:
+        if len(active_tabs) == 0:
+            print("Browser tab closed. Shutting down server...")
+            os._exit(0)
 
 def get_resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller."""
@@ -178,10 +216,43 @@ def index():
 def serve_ui(filename):
     return send_from_directory(ui_dir, filename)
 
-@app.route('/api/ping')
-def ping():
-    global last_ping
+@app.route('/api/tab_opened', methods=['POST'])
+def tab_opened():
+    global has_connected, last_ping
+    tab_id = request.json.get("tab_id") if request.is_json and request.json else None
+    with active_tabs_lock:
+        if tab_id:
+            active_tabs.add(tab_id)
+        cancel_pending_shutdown()
+    has_connected = True
     last_ping = time.time()
+    return jsonify({"status": "ok", "active_tabs": len(active_tabs)})
+
+@app.route('/api/tab_closed', methods=['POST'])
+def tab_closed():
+    try:
+        data = request.get_json(silent=True) or {}
+        tab_id = data.get("tab_id")
+    except Exception:
+        tab_id = None
+    with active_tabs_lock:
+        if tab_id:
+            active_tabs.discard(tab_id)
+    schedule_shutdown_if_no_tabs()
+    return jsonify({"status": "ok"})
+
+@app.route('/api/ping', methods=['GET', 'POST'])
+def ping():
+    global last_ping, has_connected
+    last_ping = time.time()
+    has_connected = True
+    tab_id = None
+    if request.is_json and request.json:
+        tab_id = request.json.get("tab_id")
+    with active_tabs_lock:
+        if tab_id:
+            active_tabs.add(tab_id)
+        cancel_pending_shutdown()
     return jsonify({"status": "ok"})
 
 @app.route('/api/settings', methods=['GET', 'POST'])
@@ -232,8 +303,10 @@ def select_folder():
 
 @app.route('/api/convert_file', methods=['POST'])
 def convert_file():
-    data = request.json
+    data = request.json or {}
     file_path = data.get("file_path")
+    custom_prompt = data.get("prompt")
+    force_llm = data.get("force_llm")
     
     settings = load_settings()
     output_dir = get_downloads_dir()
@@ -241,7 +314,7 @@ def convert_file():
     try:
         kwargs = {}
         # Configure LLM Client
-        if settings.get("use_llm") and settings.get("api_key"):
+        if (settings.get("use_llm") or force_llm) and settings.get("api_key"):
             from openai import OpenAI
             client = OpenAI(
                 api_key=settings.get("api_key"),
@@ -249,7 +322,9 @@ def convert_file():
             )
             kwargs["llm_client"] = client
             kwargs["llm_model"] = settings.get("llm_model") or "gpt-4o"
-            if settings.get("llm_prompt"):
+            if custom_prompt:
+                kwargs["llm_prompt"] = custom_prompt
+            elif settings.get("llm_prompt"):
                 kwargs["llm_prompt"] = settings.get("llm_prompt")
 
         # Configure Azure Document Intelligence
@@ -259,7 +334,7 @@ def convert_file():
                 kwargs["docintel_credential"] = settings.get("docintel_key")
 
         # Run conversion
-        md_converter = MarkItDown(**kwargs)
+        md_converter = get_converter(kwargs)
         result = md_converter.convert(file_path)
         markdown_content = result.text_content
 
@@ -346,7 +421,7 @@ def convert_url():
                 kwargs["docintel_credential"] = settings.get("docintel_key")
 
         # Run URL conversion
-        md_converter = MarkItDown(**kwargs)
+        md_converter = get_converter(kwargs)
         result = md_converter.convert(url)
         markdown_content = result.text_content
 
@@ -408,6 +483,8 @@ def upload_file():
         return jsonify({"success": False, "error": "No file uploaded"})
     
     file = request.files['file']
+    custom_prompt = request.form.get("prompt")
+    force_llm = request.form.get("force_llm") == "true"
     
     if file.filename == '':
         return jsonify({"success": False, "error": "Empty filename"})
@@ -424,12 +501,14 @@ def upload_file():
             
         settings = load_settings()
         kwargs = {}
-        if settings.get("use_llm") and settings.get("api_key"):
+        if (settings.get("use_llm") or force_llm) and settings.get("api_key"):
             from openai import OpenAI
             client = OpenAI(api_key=settings.get("api_key"), base_url=settings.get("api_base") or None)
             kwargs["llm_client"] = client
             kwargs["llm_model"] = settings.get("llm_model") or "gpt-4o"
-            if settings.get("llm_prompt"):
+            if custom_prompt:
+                kwargs["llm_prompt"] = custom_prompt
+            elif settings.get("llm_prompt"):
                 kwargs["llm_prompt"] = settings.get("llm_prompt")
 
         if settings.get("use_docintel") and settings.get("docintel_endpoint"):
@@ -438,7 +517,7 @@ def upload_file():
                 kwargs["docintel_credential"] = settings.get("docintel_key")
 
         # Run conversion
-        md_converter = MarkItDown(**kwargs)
+        md_converter = get_converter(kwargs)
         result = md_converter.convert(temp_path)
         markdown_content = result.text_content
         
@@ -521,12 +600,27 @@ def open_folder_containing():
 # ----------------------------------------------------
 
 def shutdown_watchdog():
-    """Shuts down Flask server if no frontend tab pings it within 10 seconds."""
-    global last_ping
+    """Watchdog for initial connection and hard disconnect fallback."""
+    global last_ping, has_connected
+    # Allow up to 60 seconds on initial startup for browser to launch
+    startup_deadline = time.time() + 60
+    while not has_connected:
+        time.sleep(1)
+        if time.time() > startup_deadline:
+            print("No client connected within startup window. Shutting down server...")
+            os._exit(0)
+
+    # Main monitoring loop:
+    # Runs continuously as long as the browser tab is open.
+    # Inactivity does NOT shut down the server.
+    # Shutdown only occurs if:
+    # 1. The tab is explicitly closed (via tab_closed callback and grace timer)
+    # 2. Or a 10-minute complete silence fallback triggers (if browser hard-crashed)
     while True:
-        time.sleep(3)
-        if time.time() - last_ping > 10:
-            print("No active client tabs detected. Shutting down server...")
+        time.sleep(10)
+        # Safety fallback if browser was force killed or crashed
+        if time.time() - last_ping > 600:
+            print("No active connection detected for 10 minutes. Shutting down server...")
             os._exit(0)
 
 def find_free_port():
@@ -547,7 +641,7 @@ def main():
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
     
-    app.run(host='127.0.0.1', port=port, debug=False, use_reloader=False)
+    app.run(host='127.0.0.1', port=port, debug=False, use_reloader=False, threaded=True)
 
 if __name__ == "__main__":
     main()

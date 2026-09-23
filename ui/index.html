@@ -40,7 +40,7 @@
                 </button>
             </nav>
             <div class="sidebar-footer">
-                <span>Version 1.0.0</span>
+                <span>Version 1.2.0</span>
             </div>
         </aside>
 
@@ -55,29 +55,70 @@
                 </div>
 
                 <div class="convert-grid">
-                    <!-- Drop Zone and File Selection -->
+                    <!-- SECTION 1: Documents & General Files -->
                     <div class="card drop-card">
+                        <div class="card-header-badge">
+                            <span class="badge badge-primary">Documents</span>
+                        </div>
                         <div class="drop-zone" id="drop-zone">
                             <div class="drop-icon">
-                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
                             </div>
-                            <h3>Drag & drop files here</h3>
-                            <p class="text-muted">or use the buttons below to select files or folders</p>
+                            <h3>Drag & drop documents</h3>
+                            <p class="text-muted">PDF, Word, Excel, Slides, Audio, Epubs & Text</p>
                             <div class="btn-group">
                                 <button class="btn btn-primary" id="btn-select-files">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                     Browse Files
                                 </button>
                                 <button class="btn btn-secondary" id="btn-select-folder">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                                     Select Folder
                                 </button>
+                            </div>
+                            <input type="file" id="native-file-input" multiple style="display: none;" accept=".pdf,.docx,.xlsx,.xls,.pptx,.txt,.csv,.json,.xml,.htm,.html,.zip,.epub,.msg,.wav,.mp3">
+                            <input type="file" id="native-folder-input" webkitdirectory directory multiple style="display: none;">
+                        </div>
+                    </div>
+
+                    <!-- SECTION 2: Image to Markdown (LLM Vision) -->
+                    <div class="card drop-card image-vision-card">
+                        <div class="card-header-badge">
+                            <span class="badge badge-vision">AI Vision</span>
+                        </div>
+                        <div class="drop-zone image-drop-zone" id="image-drop-zone">
+                            <div class="drop-icon vision-icon">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            </div>
+                            <h3>Drag & drop images</h3>
+                            <p class="text-muted">JPG, PNG, WebP, GIF & BMP for AI Vision</p>
+                            <div class="btn-group">
+                                <button class="btn btn-vision" id="btn-select-images">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                    Select Images
+                                </button>
+                            </div>
+                            <input type="file" id="native-image-input" multiple style="display: none;" accept=".jpg,.jpeg,.png,.webp,.gif,.bmp">
+                        </div>
+                        <div class="image-prompt-container">
+                            <div class="image-vision-status-row">
+                                <div class="config-status-item" id="image-vision-indicator">
+                                    <div class="dot red"></div>
+                                    <span class="vision-status-label">LLM Vision is disabled</span>
+                                </div>
+                                <button type="button" class="btn-link" id="link-goto-settings-from-img">Configure</button>
+                            </div>
+                            <div class="image-custom-prompt-wrap">
+                                <input type="text" id="image-custom-prompt" placeholder="Optional vision prompt (e.g. Describe visual layout, charts, OCR)">
                             </div>
                         </div>
                     </div>
 
-                    <!-- Webpage / YouTube URL Card -->
+                    <!-- SECTION 3: Webpage / YouTube URL Card -->
                     <div class="card config-card">
+                        <div class="card-header-badge">
+                            <span class="badge badge-secondary">Web / Links</span>
+                        </div>
                         <h3>Convert URL / Webpage</h3>
                         <p class="text-muted" style="font-size: 12px; margin-bottom: 14px;">Converts links and saves files automatically to your default <strong>Downloads</strong> folder.</p>
                         <div class="form-group" style="margin-bottom: 16px;">
