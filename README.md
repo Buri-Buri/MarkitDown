@@ -30,13 +30,6 @@ The dashboard is organized into three purpose-built conversion sections:
 *   **Live Side-by-Side Preview Drawer**: Compare rendered HTML markdown preview and raw Markdown source code with one-click clipboard copying.
 *   **Real-Time Conversion Logs**: Track conversion history, timestamps, file sizes, and view detailed error tooltips.
 
-### 3. One-Click Headless Desktop App (`run_app.bat`)
-*   **Terminal Auto-Close**: Double-clicking `run_app.bat` automatically verifies dependencies, starts the backend quietly in the background using `pythonw.exe`, opens the application in your default browser, and **immediately closes the command prompt**. No lingering terminal windows clutter your desktop.
-*   **Smart Tab Lifecycle Management**: The backend server stays alive continuously while you have the browser tab open. When you close all MarkItDown Studio tabs, the backend automatically shuts down cleanly after a brief grace period (4 seconds), ensuring zero phantom background processes or idle resource drain.
-*   **Web Worker Heartbeat**: Uses a dedicated background Web Worker timer so your session stays active even when the tab is running in the background or minimized.
-
----
-
 ## System Requirements
 
 *   **Operating System**: Windows 10 or Windows 11 (64-bit).
