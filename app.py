@@ -311,6 +311,8 @@ def format_friendly_error(err):
         return "OpenAI API Error: Rate limit reached (Error 429). Please wait a moment before trying again."
     if "AuthenticationError" in err_str:
         return "OpenAI API Error: Authentication failed. Please verify your OpenAI API key in Settings."
+    if "is no longer available" in err_str or "NOT_FOUND" in err_str or "NotFoundError" in err_str:
+        return "Model Error (404): The selected model is no longer available. If using Google Gemini, please set the model name to 'gemini-3.6-flash' or 'gemini-flash-latest' in Settings."
     return err_str
 
 @app.route('/api/convert_file', methods=['POST'])
