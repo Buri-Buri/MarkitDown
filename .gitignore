@@ -51,6 +51,7 @@ ENV/
 # Local configuration and user history
 settings.json
 history.json
+temp_uploads/
 *.log
 
 # IDEs and editors

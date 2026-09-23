@@ -301,6 +301,18 @@ def select_folder():
         print(f"Error selecting folder: {e}")
         return ""
 
+def format_friendly_error(err):
+    err_str = str(err)
+    if "credit_balance_exhausted" in err_str or "insufficient_quota" in err_str:
+        return "OpenAI API Error: Quota exceeded (Error 429). You have no credits remaining on your OpenAI account. Please add billing credits at platform.openai.com/billing or update your API key in Settings."
+    if "invalid_api_key" in err_str or "Incorrect API key provided" in err_str:
+        return "OpenAI API Error: Invalid API key. Please check and re-enter your OpenAI API key in Settings."
+    if "RateLimitError" in err_str:
+        return "OpenAI API Error: Rate limit reached (Error 429). Please wait a moment before trying again."
+    if "AuthenticationError" in err_str:
+        return "OpenAI API Error: Authentication failed. Please verify your OpenAI API key in Settings."
+    return err_str
+
 @app.route('/api/convert_file', methods=['POST'])
 def convert_file():
     data = request.json or {}
@@ -371,7 +383,7 @@ def convert_file():
             "output_name": os.path.basename(output_path)
         })
     except Exception as e:
-        error_msg = str(e)
+        error_msg = format_friendly_error(e)
         print(traceback.format_exc())
         
         history = load_history()
@@ -458,7 +470,7 @@ def convert_url():
             "output_name": os.path.basename(output_path)
         })
     except Exception as e:
-        error_msg = str(e)
+        error_msg = format_friendly_error(e)
         print(traceback.format_exc())
         
         history = load_history()
@@ -559,7 +571,21 @@ def upload_file():
             "output_name": os.path.basename(output_path)
         })
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
+        error_msg = format_friendly_error(e)
+        print(traceback.format_exc())
+        
+        history = load_history()
+        entry = {
+            "source_path": f"Uploaded: {file.filename if 'file' in locals() and file else 'Unknown'}",
+            "source_name": file.filename if 'file' in locals() and file else "Unknown",
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "status": "error",
+            "error": error_msg
+        }
+        history.insert(0, entry)
+        save_history(history)
+        
+        return jsonify({"success": False, "error": error_msg})
 
 @app.route('/api/read_text_file', methods=['POST'])
 def read_text_file():

@@ -721,13 +721,21 @@ function renderHistoryTable() {
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                         </button>
                     ` : `
-                        <span class="text-muted" title="${entry.error || ''}">Hover to view error</span>
+                        <button class="btn btn-secondary btn-sm btn-history-error" data-idx="${idx}">View Error</button>
                     `}
                 </div>
             </td>
         `;
         
         historyList.appendChild(row);
+    });
+
+    document.querySelectorAll('.btn-history-error').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const idx = parseInt(e.target.getAttribute('data-idx'));
+            const entry = appHistory[idx];
+            alert(`Conversion Error for "${entry.source_name}":\n\n${entry.error || 'Unknown error occurred.'}`);
+        });
     });
 
     document.querySelectorAll('.btn-view-md').forEach(btn => {
@@ -788,7 +796,8 @@ function renderQueueTable() {
         } else if (file.status === 'success') {
             badgeHTML = `<span class="badge badge-success">Success</span>`;
         } else if (file.status === 'error') {
-            badgeHTML = `<span class="badge badge-error" title="${file.error}">Error</span>`;
+            const cleanErr = (file.error || 'Conversion failed').replace(/"/g, '&quot;');
+            badgeHTML = `<span class="badge badge-error btn-queue-error" data-idx="${idx}" title="Click to view details: ${cleanErr}" style="cursor: pointer;">Error ⚠️</span>`;
         }
 
         const formattedSize = formatBytes(file.size);
@@ -814,6 +823,14 @@ function renderQueueTable() {
         `;
         
         queueList.appendChild(row);
+    });
+
+    document.querySelectorAll('.btn-queue-error').forEach(badge => {
+        badge.addEventListener('click', (e) => {
+            const idx = parseInt(e.target.closest('.btn-queue-error').getAttribute('data-idx'));
+            const file = conversionQueue[idx];
+            alert(`Conversion Error for "${file.name}":\n\n${file.error || 'Unknown error occurred.'}`);
+        });
     });
 
     document.querySelectorAll('.btn-remove-queue').forEach(btn => {
@@ -907,6 +924,12 @@ async function startConversion() {
     btnSelectFolder.disabled = false;
     
     loadHistory();
+
+    const failedItems = conversionQueue.filter(item => item.status === 'error');
+    if (failedItems.length > 0) {
+        const firstErr = failedItems[0];
+        alert(`Conversion Error for "${firstErr.name}":\n\n${firstErr.error}\n\n(Click on any "Error ⚠️" badge to review this message)`);
+    }
 }
 
 // ----------------------------------------------------
