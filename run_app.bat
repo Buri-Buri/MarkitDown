@@ -65,7 +65,7 @@ exit /b 1
 
 :check_deps
 :: 2. Pre-flight dependency check (silent if already satisfied)
-%PYTHON_CMD% -c "import flask, markitdown" >nul 2>&1
+%PYTHON_CMD% -c "import flask, markitdown, mammoth, openpyxl, pdfplumber" >nul 2>&1
 if %errorlevel% equ 0 goto launch_background
 
 echo ====================================================
@@ -76,7 +76,7 @@ echo [INFO] Installing required dependencies...
 if exist requirements.txt (
     %PYTHON_CMD% -m pip install -r requirements.txt
 ) else (
-    %PYTHON_CMD% -m pip install flask markitdown openai
+    %PYTHON_CMD% -m pip install flask "markitdown[all]" openai
 )
 if %errorlevel% neq 0 (
     echo.
