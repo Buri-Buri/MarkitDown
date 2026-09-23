@@ -236,11 +236,11 @@ body {
 /* Convert Grid Layout - 3 Column Modern Dashboard */
 .convert-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 20px;
 }
 
-@media (max-width: 1250px) {
+@media (max-width: 1100px) {
     .convert-grid {
         grid-template-columns: 1fr;
     }
@@ -292,6 +292,20 @@ body {
 .drop-zone.hover {
     border-color: var(--color-primary);
     background-color: rgba(59, 130, 246, 0.04);
+}
+
+.btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 6px;
+}
+
+.btn-group .btn {
+    white-space: nowrap;
 }
 
 /* Dedicated Image Vision Card & Controls */
